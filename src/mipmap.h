@@ -108,5 +108,71 @@ bool GenerateMipmap(int width, int height, vector<vec3>& input, vector<TexInfo>&
 }
 
 //non power of 2 mipmap
+//round down
+bool GenerateMipmapNPOT(int width, int height, vector<vec3>& input, vector<TexInfo>& ret){
+	fprintf(stdout, "image res [%d, %d]\n", width, height);
+	int nLevel = Log2Int(width > height ? width : height) + 1;
+	fprintf(stdout, "pyramid size %d\n", nLevel);
+
+	ret.resize(nLevel);
+	ret[0].w = width;
+	ret[0].h = height;
+	ret[0].data.resize(width * height);
+	for (int i = 0; i < width*height; ++i)
+		ret[0].data[i] = input[i];
+
+	for (int i = 1; i < nLevel; ++i){
+		int prevW = ret[i - 1].w;
+		int prevH = ret[i - 1].h;
+		int w = prevW >> 1; w = w > 1 ? w : 1;
+		int h = prevH >> 1; h = h > 1 ? h : 1;
+		ret[i].w = w;
+		ret[i].h = h;
+		ret[i].data.resize(w*h);
+
+		vector<vec3> temp(prevH * w);
+		for (int j = 0; j < prevH; ++j){
+			for (int k = 0; k < w; ++k){
+				float w1 = (float)(w - k) / prevW;
+				float w2 = (float)(w) / prevW;
+				float w3 = (float)(k + 1 == w ? k : k + 1) / prevW;
+
+				int x1 = prevW == 1 ? 0 : 2 * k;
+				int x2 = prevW == 1 ? 0 : 2 * k + 1;
+				int x3 = prevW == 1 ? 0 : (k + 1 == w ? 2 * k + 1 : 2 * k + 2);
+				int idx1 = j*prevW + x1;
+				int idx2 = j*prevW + x2;
+				int idx3 = j*prevW + x3;
+				vec3 c = w1*ret[i - 1].data[idx1] +
+					w2*ret[i - 1].data[idx2] +
+					w3*ret[i - 1].data[idx3];
+
+				temp[j*w + k] = c;
+			}
+		}
+
+		for (int j = 0; j < w; ++j){
+			for (int k = 0; k < h; ++k){
+				float w1 = (float)(h - k) / prevH;
+				float w2 = (float)(h) / prevH;
+				float w3 = (float)(k + 1 == w ? k : k + 1) / prevH;
+				
+				int x1 = prevH == 1 ? 0 : 2 * k;
+				int x2 = prevH == 1 ? 0 : 2 * k + 1;
+				int x3 = prevH == 1 ? 0 : (k + 1 == h ? 2 * k + 1 : 2 * k + 2);
+				int idx1 = x1*w + j;
+				int idx2 = x2*w + j;
+				int idx3 = x3*w + j;
+				vec3 c = w1*temp[idx1] +
+					w2*temp[idx2] +
+					w3*temp[idx3];
+
+				ret[i].data[k*w + j] = c;
+			}
+		}
+	}
+
+	return true;
+}
 
 #endif

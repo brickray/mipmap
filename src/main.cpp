@@ -60,22 +60,36 @@ bool WritePng(const char* file, int width, int height, vector<vec3>& input){
 	return true;
 }
 
-void PrintUsage(){
-	fprintf(stdout, "******************Usage******************\n");
-	fprintf(stdout, "mipmap.exe filename\n");
-	fprintf(stdout, "*****************************************\n");
+void Usage(const char* msg = nullptr){
+	if (msg)
+		fprintf(stdout, "%s\n\n", msg);
+
+	fprintf(stdout, "usage: mipmap [option] <filename>\n");
+	fprintf(stdout, "options:\n");
+	fprintf(stdout, "--mode  0(stands for not use npot) 1(stands for use npot)\n");
 }
 
 void main(int argc, char** argv){
-	PrintUsage();
+	bool useNPOT = true;
+	string file = "";
+	for (int i = 1; i < argc; ++i){
+		if (strcmp(argv[i], "--mode") == 0){
+			if (i + 1 == argc){
+				Usage("missing value after --mode argument");
+				return;
+			}
 
-	if (argc != 2){
-		fprintf(stderr, "param error\n");
+			useNPOT = atoi(argv[++i]);
+		}
+		else
+			file = argv[i];
+	}
 
+	if (file == ""){
+		Usage("missing image file");
 		return;
 	}
 
-	string file = argv[1];
 	string base = file.substr(0, file.find_last_of("/") + 1);
 	int w, h;
 	vector<vec3> ret;
@@ -85,7 +99,10 @@ void main(int argc, char** argv){
 
 	vector<TexInfo> pyramid;
 	clock_t start = clock();
-	GenerateMipmap(w, h, ret, pyramid);
+	if (useNPOT)
+		GenerateMipmapNPOT(w, h, ret, pyramid);
+	else
+		GenerateMipmap(w, h, ret, pyramid);
 	fprintf(stdout, "generate mipmap spend [%.3fms]\n", float(clock() - start));
 	
 	start = clock();
